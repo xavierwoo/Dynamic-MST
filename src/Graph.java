@@ -37,12 +37,29 @@ public class Graph {
             int source = Integer.parseInt(data[0]);
             int target = Integer.parseInt(data[1]);
             double cost = Double.parseDouble(data[2]);
-            var edge = new Edge(vertices.get(source), vertices.get(target), cost);
+            Vertex s = vertices.get(source);
+            Vertex t = vertices.get(target);
+            var edge = new Edge(s, t, cost);
             allEdges.add(edge);
+            s.degree += 1;
+            s.isMute = false;
+            t.degree += 1;
+            t.isMute = false;
             edgeLists.get(source).add(edge);
             edgeLists.get(target).add(edge);
+
         }
         bf.close();
+    }
+
+    public List<Edge> allUnmuteEdges(){
+        var unmute_edges = new ArrayList<Edge>();
+        for(var e: allEdges){
+            if(!e.isMute){
+                unmute_edges.add(e);
+            }
+        }
+        return unmute_edges;
     }
 
     public void muteVertex(int id){
@@ -52,6 +69,35 @@ public class Graph {
     public void unmuteVertex(int id){
         vertices.get(id).isFeasible = true;
         vertices_count += 1;
+    }
+
+    public SpanningTree spanningTree_k(){
+        allEdges.sort(Comparator.comparingDouble(e -> e.cost));
+
+        Arrays.fill(g_disjointSet, -1);
+
+        var tree = new SpanningTree();
+        tree.sortedAllEdges = new ArrayList<>(allEdges);
+        for(var edge : allEdges){
+            if(edge.isMute)continue;
+            int i = edge.source.id;
+            while(g_disjointSet[i] >= 0) i = g_disjointSet[i];
+            int j = edge.target.id;
+            while(g_disjointSet[j] >= 0) j = g_disjointSet[j];
+            if(i != j){
+                if(i < j){
+                    g_disjointSet[i] += g_disjointSet[j];
+                    g_disjointSet[j] = i;
+                }else{
+                    g_disjointSet[j] += g_disjointSet[i];
+                    g_disjointSet[i] = j;
+                }
+                tree.addEdge(edge);
+            }
+            if(tree.treeEdges.size() >= vertices_count - 1)break;
+        }
+        //tree.disjointSet = g_disjointSet;
+        return tree;
     }
 
     public SpanningTree spanningTree_kruskal(){
@@ -265,6 +311,115 @@ public class Graph {
         return tree;
     }
 
+    private void remove_e_from_tree(SpanningTree tree, List<Edge> removedE, List<Edge> remainingEdges){
+        for(var e : removedE){
+            muteEdge(e);
+        }
+
+        for(var e: tree.treeEdges){
+            if(!e.isMute){
+                remainingEdges.add(e);
+            }
+        }
+    }
+
+
+    private int find_unMute_unvisited(){
+        for(int i=0; i<g_visited.length; ++i){
+            if(vertices.get(i).isMute)continue;
+            if(!g_visited[i])return i;
+        }
+        return -1;
+    }
+
+    //return the sub-components number
+    private int rebuild_disjoint_set(){
+        Arrays.fill(g_disjointSet, -1);
+        Arrays.fill(g_visited, false);
+
+        int unvisited_id = find_unMute_unvisited();
+        int components_count = 0;
+        while(unvisited_id > -1){
+            components_count++;
+            Vertex v = vertices.get(unvisited_id);
+            g_visited[unvisited_id] = true;
+            count_recur(unvisited_id, v);
+            unvisited_id = find_unMute_unvisited();
+        }
+        return components_count;
+    }
+
+    public SpanningTree spanningTree_of_sub(SpanningTree oriTree, List<Edge> removedE){
+        var remainingEdges = new ArrayList<Edge>();
+        remove_e_from_tree(oriTree, removedE, remainingEdges);
+
+        var tree = new SpanningTree();
+        tree.sortedAllEdges = oriTree.sortedAllEdges;
+        for(var e : remainingEdges){
+            tree.addEdge(e);
+        }
+
+        for(var e : allEdges){
+            e.isOn = false;
+        }
+        for(var e : remainingEdges){
+            e.isOn = true;
+        }
+        int components_count = rebuild_disjoint_set();
+        if(components_count == 1)return tree;
+
+//        allEdges.sort(Comparator.comparingDouble(e -> e.cost));
+        for(var edge : oriTree.sortedAllEdges){
+            if(edge.isMute || edge.isOn)continue;
+            int i = edge.source.id;
+            while(g_disjointSet[i] >= 0) i = g_disjointSet[i];
+            int j = edge.target.id;
+            while(g_disjointSet[j] >= 0) j = g_disjointSet[j];
+            if(i != j){
+                if(i < j){
+                    g_disjointSet[i] += g_disjointSet[j];
+                    g_disjointSet[j] = i;
+                }else{
+                    g_disjointSet[j] += g_disjointSet[i];
+                    g_disjointSet[i] = j;
+                }
+                tree.addEdge(edge);
+            }
+            if(tree.treeEdges.size() >= vertices_count - 1)break;
+        }
+        return tree;
+    }
+
+    void muteEdge(Edge e){
+        if(e.isMute)return;
+        e.isMute = true;
+        e.source.degree--;
+        if(e.source.degree == 0){
+            e.source.isMute = true;
+            vertices_count--;
+        }
+        e.target.degree--;
+        if(e.target.degree == 0){
+            e.target.isMute = true;
+            vertices_count--;
+        }
+    }
+
+    void unmuteEdge(Edge e){
+        if(!e.isMute)return;
+        e.isMute = false;
+        e.source.degree++;
+        if(e.source.degree == 1){
+            e.source.isMute = false;
+            vertices_count++;
+        }
+        e.target.degree++;
+        if(e.target.degree == 1){
+            e.target.isMute = false;
+            vertices_count++;
+        }
+    }
+
     class SpanningTree {
         List<Edge> treeEdges;
         double cost;
@@ -289,6 +444,8 @@ public class Graph {
 
     class Vertex {
         int id;
+        int degree = 0;
+        boolean isMute = true;
         boolean isFeasible = true;
         Vertex(int id){
             this.id = id;
@@ -304,6 +461,31 @@ public class Graph {
         double cost;
         boolean isOn = true;
         boolean isMute = false;
+
+//        void setMute(boolean value){
+//            if(isMute && !value){
+//                isMute = false;
+//                source.degree += 1;
+//                if(source.degree == 1){
+//                    source.isMute = false;
+//                }
+//                target.degree += 1;
+//                if(target.degree == 1){
+//                    target.isMute = false;
+//                }
+//            }else if(!isMute && value){
+//                isMute = true;
+//                source.degree -= 1;
+//                if(source.degree == 0){
+//                    source.isMute = true;
+//                }
+//                target.degree -= 1;
+//                if(target.degree == 0){
+//                    target.isMute = false;
+//                }
+//            }
+//        }
+
         Edge(Vertex s, Vertex t, double c){
             source = s;
             target = t;
