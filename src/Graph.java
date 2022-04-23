@@ -96,7 +96,6 @@ public class Graph {
             }
             if(tree.treeEdges.size() >= vertices_count - 1)break;
         }
-        //tree.disjointSet = g_disjointSet;
         return tree;
     }
 
@@ -390,6 +389,75 @@ public class Graph {
         return tree;
     }
 
+    public SpanningTree spanningTree_of_super(SpanningTree oriTree, List<Edge> addE){
+
+        for(var e : allEdges){
+            e.isOn = false;
+        }
+
+        var currEdges = new ArrayList<Edge>();
+        for(var e : addE){
+            unmuteEdge(e);
+            e.isOn = true;
+            currEdges.add(e);
+        }
+
+        for(var e : oriTree.treeEdges){
+            e.isOn = true;
+           currEdges.add(e);
+        }
+        currEdges.sort(Comparator.comparingDouble(e -> e.cost));
+        Arrays.fill(g_disjointSet, -1);
+        var tree = new SpanningTree();
+        for(var edge : currEdges){
+            if(edge.isMute)continue;
+            int i = edge.source.id;
+            while(g_disjointSet[i] >= 0) i = g_disjointSet[i];
+            int j = edge.target.id;
+            while(g_disjointSet[j] >= 0) j = g_disjointSet[j];
+            if(i != j){
+                if(i < j){
+                    g_disjointSet[i] += g_disjointSet[j];
+                    g_disjointSet[j] = i;
+                }else{
+                    g_disjointSet[j] += g_disjointSet[i];
+                    g_disjointSet[i] = j;
+                }
+                tree.addEdge(edge);
+            }
+            if(tree.treeEdges.size() >= vertices_count - 1)break;
+        }
+        tree.sortedAllEdges = sim_gen_new_sorted_edges(oriTree.sortedAllEdges, addE);
+        return tree;
+    }
+
+    private List<Edge> sim_gen_new_sorted_edges(List<Edge> ori, List<Edge> addE){
+        addE.sort(Comparator.comparingDouble(e -> e.cost));
+        var new_list = new ArrayList<Edge>(ori.size());
+        int i=0, j=0;
+        while(i<ori.size() && j<addE.size()){
+            while(ori.get(i).isMute)i++;
+            if(i>=ori.size())break;
+            if(ori.get(i).cost < addE.get(j).cost){
+                new_list.add(ori.get(i));
+                i++;
+            }else{
+                new_list.add(addE.get(j));
+                j++;
+            }
+        }
+        if(i== ori.size()){
+            for(int k =j; k < addE.size(); ++k){
+                new_list.add(addE.get(k));
+            }
+        }else{
+            for(int k=i; k< ori.size(); ++k){
+                new_list.add(ori.get(k));
+            }
+        }
+        return new_list;
+    }
+
     void muteEdge(Edge e){
         if(e.isMute)return;
         e.isMute = true;
@@ -434,11 +502,11 @@ public class Graph {
         }
 
         public String toString(){
-            String str = "";
+            StringBuilder str = new StringBuilder();
             for(var e : treeEdges){
-                str += e.source + "--" + e.target + "\n";
+                str.append(e.source).append("--").append(e.target).append("\n");
             }
-            return str;
+            return str.toString();
         }
     }
 
@@ -461,30 +529,6 @@ public class Graph {
         double cost;
         boolean isOn = true;
         boolean isMute = false;
-
-//        void setMute(boolean value){
-//            if(isMute && !value){
-//                isMute = false;
-//                source.degree += 1;
-//                if(source.degree == 1){
-//                    source.isMute = false;
-//                }
-//                target.degree += 1;
-//                if(target.degree == 1){
-//                    target.isMute = false;
-//                }
-//            }else if(!isMute && value){
-//                isMute = true;
-//                source.degree -= 1;
-//                if(source.degree == 0){
-//                    source.isMute = true;
-//                }
-//                target.degree -= 1;
-//                if(target.degree == 0){
-//                    target.isMute = false;
-//                }
-//            }
-//        }
 
         Edge(Vertex s, Vertex t, double c){
             source = s;
