@@ -62,15 +62,6 @@ public class Graph {
         return unmute_edges;
     }
 
-    public void muteVertex(int id){
-        vertices.get(id).isFeasible = false;
-        vertices_count -= 1;
-    }
-    public void unmuteVertex(int id){
-        vertices.get(id).isFeasible = true;
-        vertices_count += 1;
-    }
-
     public SpanningTree spanningTree_k(){
         allEdges.sort(Comparator.comparingDouble(e -> e.cost));
 
@@ -99,73 +90,6 @@ public class Graph {
         return tree;
     }
 
-    public SpanningTree spanningTree_kruskal(){
-        allEdges.sort(Comparator.comparingDouble(e -> e.cost));
-
-        Arrays.fill(g_disjointSet, -1);
-
-        var tree = new SpanningTree();
-        tree.sortedAllEdges = new ArrayList<>(allEdges);
-        for(var edge : allEdges){
-            if(!edge.source.isFeasible || !edge.target.isFeasible)continue;
-            int i = edge.source.id;
-            while(g_disjointSet[i] >= 0) i = g_disjointSet[i];
-            int j = edge.target.id;
-            while(g_disjointSet[j] >= 0) j = g_disjointSet[j];
-            if(i != j){
-                if(i < j){
-                    g_disjointSet[i] += g_disjointSet[j];
-                    g_disjointSet[j] = i;
-                }else{
-                    g_disjointSet[j] += g_disjointSet[i];
-                    g_disjointSet[i] = j;
-                }
-                tree.addEdge(edge);
-            }
-            if(tree.treeEdges.size() >= vertices_count - 1)break;
-        }
-        //tree.disjointSet = g_disjointSet;
-        return tree;
-    }
-
-    private void remove_v_from_tree(SpanningTree tree, Vertex removedV, List<Edge> remainingEdges, List<Vertex> conVertices){
-        for(var e : tree.treeEdges){
-            if(e.source == removedV){
-                conVertices.add(e.target);
-            }else if(e.target == removedV){
-                conVertices.add(e.source);
-            }else{
-                remainingEdges.add(e);
-            }
-        }
-    }
-
-    private void rebuild_g_disjoint_set(List<Vertex> conVertices){
-
-        Arrays.fill(g_disjointSet, -1);
-        Arrays.fill(g_visited, false);
-
-//        for(var v : conVertices){
-//            g_visited[v.id] = true;
-//            count_recur(v.id, v);
-//        }
-        int unvisited_id = find_unvisited();
-        while(unvisited_id > -1){
-            var v = vertices.get(unvisited_id);
-            g_visited[unvisited_id] = true;
-            count_recur(unvisited_id, v);
-            unvisited_id = find_unvisited();
-        }
-    }
-
-    private int find_unvisited(){
-        for(int i=0; i<g_visited.length; ++i){
-            if(!vertices.get(i).isFeasible)continue;
-            if(!g_visited[i])return i;
-        }
-        return -1;
-    }
-
     private void count_recur(int source_id, Vertex curr){
         var el = edgeLists.get(curr.id);
         for(var e : el){
@@ -179,135 +103,6 @@ public class Graph {
                 }
             }
         }
-    }
-
-    public SpanningTree spanningTree_of_sub(SpanningTree oriTree, Vertex removedV){
-        var remainingEdges = new ArrayList<Edge>();
-        var conVertices = new ArrayList<Vertex>();
-        remove_v_from_tree(oriTree, removedV, remainingEdges, conVertices);
-
-        var tree = new SpanningTree();
-        for(var e : remainingEdges){
-            tree.addEdge(e);
-        }
-
-        if(conVertices.size() == 1){
-            return tree;
-        }
-
-        for(var e : allEdges){
-            e.isOn = false;
-        }
-        for(var e : remainingEdges){
-            e.isOn = true;
-        }
-
-        rebuild_g_disjoint_set(conVertices);
-        for(var edge : oriTree.sortedAllEdges){
-            if(!edge.source.isFeasible || !edge.target.isFeasible || edge.isOn)continue;
-            int i = edge.source.id;
-            while(g_disjointSet[i] >= 0) i = g_disjointSet[i];
-            int j = edge.target.id;
-            while(g_disjointSet[j] >= 0) j = g_disjointSet[j];
-            if(i != j){
-                if(i < j){
-                    g_disjointSet[i] += g_disjointSet[j];
-                    g_disjointSet[j] = i;
-                }else{
-                    g_disjointSet[j] += g_disjointSet[i];
-                    g_disjointSet[i] = j;
-                }
-                tree.addEdge(edge);
-            }
-            if(tree.treeEdges.size() >= vertices_count - 1)break;
-        }
-        return tree;
-    }
-
-    public SpanningTree spanningTree_of_super(SpanningTree oriTree, Vertex addedV){
-        for(var e : allEdges){
-            e.isOn = false;
-        }
-        var currEdges = new ArrayList<Edge>();
-        for(var e : oriTree.treeEdges){
-            e.isOn = true;
-            currEdges.add(e);
-        }
-        for(var e : edgeLists.get(addedV.id)){
-            e.isOn = true;
-            currEdges.add(e);
-        }
-        currEdges.sort(Comparator.comparingDouble(e -> e.cost));
-        int[] disjointSet = new int[vertices.size()];
-        Arrays.fill(disjointSet, -1);
-        var tree = new SpanningTree();
-        for(var edge : currEdges){
-            int i = edge.source.id;
-            while(disjointSet[i] >= 0) i = disjointSet[i];
-            int j = edge.target.id;
-            while(disjointSet[j] >= 0) j = disjointSet[j];
-            if(i != j){
-                if(i < j){
-                    disjointSet[i] += disjointSet[j];
-                    disjointSet[j] = i;
-                }else{
-                    disjointSet[j] += disjointSet[i];
-                    disjointSet[i] = j;
-                }
-                tree.addEdge(edge);
-            }
-            if(tree.treeEdges.size() >= vertices_count - 1)break;
-        }
-        return tree;
-    }
-
-    public SpanningTree spanningTree_update(SpanningTree oriTree, Vertex removeV, Vertex addV){
-        muteVertex(addV.id);
-        var rmv_spanningTree = spanningTree_of_sub(oriTree, removeV);
-        //var tree_t = spanningTree_kruskal();
-        unmuteVertex(addV.id);
-        var tree =  spanningTree_of_super(rmv_spanningTree, addV, removeV);
-        //check_tree(tree);
-        return tree;
-    }
-
-    public SpanningTree spanningTree_of_super(SpanningTree oriTree, Vertex addedV, Vertex excludeV){
-        for(var e : allEdges){
-            e.isOn = false;
-        }
-        var currEdges = new ArrayList<Edge>();
-        for(var e : oriTree.treeEdges){
-            e.isOn = true;
-            currEdges.add(e);
-        }
-        for(var e : edgeLists.get(addedV.id)){
-            var v = e.getOtherEndV(addedV);
-            if(v==excludeV)continue;
-            e.isOn = true;
-            currEdges.add(e);
-        }
-        currEdges.sort(Comparator.comparingDouble(e -> e.cost));
-        int[] disjointSet = new int[vertices.size()];
-        Arrays.fill(disjointSet, -1);
-        var tree = new SpanningTree();
-        for(var edge : currEdges){
-            int i = edge.source.id;
-            while(disjointSet[i] >= 0) i = disjointSet[i];
-            int j = edge.target.id;
-            while(disjointSet[j] >= 0) j = disjointSet[j];
-            if(i != j){
-                if(i < j){
-                    disjointSet[i] += disjointSet[j];
-                    disjointSet[j] = i;
-                }else{
-                    disjointSet[j] += disjointSet[i];
-                    disjointSet[i] = j;
-                }
-                tree.addEdge(edge);
-            }
-            if(tree.treeEdges.size() >= vertices_count - 1)break;
-        }
-        return tree;
     }
 
     private void remove_e_from_tree(SpanningTree tree, List<Edge> removedE, List<Edge> remainingEdges){
@@ -366,8 +161,7 @@ public class Graph {
         }
         int components_count = rebuild_disjoint_set();
         if(components_count == 1)return tree;
-
-//        allEdges.sort(Comparator.comparingDouble(e -> e.cost));
+        
         for(var edge : oriTree.sortedAllEdges){
             if(edge.isMute || edge.isOn)continue;
             int i = edge.source.id;
@@ -514,7 +308,6 @@ public class Graph {
         int id;
         int degree = 0;
         boolean isMute = true;
-        boolean isFeasible = true;
         Vertex(int id){
             this.id = id;
         }
