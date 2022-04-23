@@ -52,16 +52,6 @@ public class Graph {
         bf.close();
     }
 
-    public List<Edge> allUnmuteEdges(){
-        var unmute_edges = new ArrayList<Edge>();
-        for(var e: allEdges){
-            if(!e.isMute){
-                unmute_edges.add(e);
-            }
-        }
-        return unmute_edges;
-    }
-
     public SpanningTree spanningTree_k(){
         allEdges.sort(Comparator.comparingDouble(e -> e.cost));
 
@@ -161,7 +151,7 @@ public class Graph {
         }
         int components_count = rebuild_disjoint_set();
         if(components_count == 1)return tree;
-        
+
         for(var edge : oriTree.sortedAllEdges){
             if(edge.isMute || edge.isOn)continue;
             int i = edge.source.id;
@@ -230,7 +220,7 @@ public class Graph {
         var new_list = new ArrayList<Edge>(ori.size());
         int i=0, j=0;
         while(i<ori.size() && j<addE.size()){
-            while(ori.get(i).isMute)i++;
+            while(ori.get(i).isMute)i+=1;
             if(i>=ori.size())break;
             if(ori.get(i).cost < addE.get(j).cost){
                 new_list.add(ori.get(i));
@@ -250,6 +240,14 @@ public class Graph {
             }
         }
         return new_list;
+    }
+
+    public SpanningTree spanningTree_update(SpanningTree oriTree, List<Edge> removeE, List<Edge> addE){
+        var tree = removeE.isEmpty() ? oriTree : spanningTree_of_sub(oriTree, removeE);
+        if(!addE.isEmpty()){
+            tree = spanningTree_of_super(tree, addE);
+        }
+        return tree;
     }
 
     void muteEdge(Edge e){
