@@ -152,25 +152,31 @@ public class Graph {
         int components_count = rebuild_disjoint_set();
         if(components_count == 1)return tree;
 
+        //Collections.sort(allEdges, Comparator.comparingDouble(a->a.cost));
         for(var edge : oriTree.sortedAllEdges){
+        //for(var edge : allEdges){
             if(edge.isMute || edge.isOn)continue;
-            int i = edge.source.id;
-            while(g_disjointSet[i] >= 0) i = g_disjointSet[i];
-            int j = edge.target.id;
-            while(g_disjointSet[j] >= 0) j = g_disjointSet[j];
-            if(i != j){
-                if(i < j){
-                    g_disjointSet[i] += g_disjointSet[j];
-                    g_disjointSet[j] = i;
-                }else{
-                    g_disjointSet[j] += g_disjointSet[i];
-                    g_disjointSet[i] = j;
-                }
-                tree.addEdge(edge);
-            }
+            check_if_tree_edge(tree, edge);
             if(tree.treeEdges.size() >= vertices_count - 1)break;
         }
         return tree;
+    }
+
+    private void check_if_tree_edge(SpanningTree tree, Edge edge){
+        int i = edge.source.id;
+        while(g_disjointSet[i] >= 0) i = g_disjointSet[i];
+        int j = edge.target.id;
+        while(g_disjointSet[j] >= 0) j = g_disjointSet[j];
+        if(i != j){
+            if(i < j){
+                g_disjointSet[i] += g_disjointSet[j];
+                g_disjointSet[j] = i;
+            }else{
+                g_disjointSet[j] += g_disjointSet[i];
+                g_disjointSet[i] = j;
+            }
+            tree.addEdge(edge);
+        }
     }
 
     public SpanningTree spanningTree_of_super(SpanningTree oriTree, List<Edge> addE){
@@ -195,20 +201,7 @@ public class Graph {
         var tree = new SpanningTree();
         for(var edge : currEdges){
             if(edge.isMute)continue;
-            int i = edge.source.id;
-            while(g_disjointSet[i] >= 0) i = g_disjointSet[i];
-            int j = edge.target.id;
-            while(g_disjointSet[j] >= 0) j = g_disjointSet[j];
-            if(i != j){
-                if(i < j){
-                    g_disjointSet[i] += g_disjointSet[j];
-                    g_disjointSet[j] = i;
-                }else{
-                    g_disjointSet[j] += g_disjointSet[i];
-                    g_disjointSet[i] = j;
-                }
-                tree.addEdge(edge);
-            }
+            check_if_tree_edge(tree, edge);
             if(tree.treeEdges.size() >= vertices_count - 1)break;
         }
         tree.sortedAllEdges = sim_gen_new_sorted_edges(oriTree.sortedAllEdges, addE);
@@ -220,7 +213,7 @@ public class Graph {
         var new_list = new ArrayList<Edge>(ori.size());
         int i=0, j=0;
         while(i<ori.size() && j<addE.size()){
-            while(ori.get(i).isMute)i+=1;
+            while(i< ori.size() && ori.get(i).isMute)i+=1;
             if(i>=ori.size())break;
             if(ori.get(i).cost < addE.get(j).cost){
                 new_list.add(ori.get(i));

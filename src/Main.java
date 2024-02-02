@@ -8,16 +8,16 @@ public class Main {
 	// write your code here
 
 //        var g = new Graph("instances/test.txt");
-        var g = new Graph("instances/Range_150/ins_100_1.txt");
+        var g = new Graph("instances/Range_150/ins_500_1.txt");
         Random random = new Random(4);
 
-        int removeE_num = 1;
-        int addE_num = 1;
+        int removeE_num = 10;
+        int addE_num = 10;
         test_update(g, random, removeE_num, addE_num);
     }
 
     static void test_update(Graph g, Random random, int removeE_num, int addE_num){
-        System.out.println("\n测试更新：删除"+removeE_num+"条边，增加"+addE_num+"条边");
+        System.out.println("\nTest update：delete "+removeE_num+" edges，add "+addE_num+" edges");
         long u_time = 0;
         long k_time = 0;
         var remove_set = new HashSet<Graph.Edge>(removeE_num);
@@ -53,6 +53,7 @@ public class Main {
 
             Collections.shuffle(g.allEdges);
             long start = System.currentTimeMillis();
+
             var update_tree = g.spanningTree_update(prevTree, removeE, addE);
             u_time += System.currentTimeMillis() - start;
 
@@ -74,7 +75,7 @@ public class Main {
             prevTree = update_tree;
         }
 
-        System.out.println("更新算法耗时：" + u_time);
-        System.out.println("克鲁斯卡尔耗时：" + k_time);
+        System.out.println("update version: " + u_time);
+        System.out.println("Kruskal's :" + k_time);
     }
 }
